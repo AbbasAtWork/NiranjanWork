@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CKEditor 5 Custom Plugin Example</title>
+
+  <!-- Include CKEditor 5 script files -->
+  <script src="https://cdn.ckeditor.com/ckeditor5/23.1.0/classic/ckeditor.js"></script>
+
+  <!-- Include jQuery library -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+
+<body>
+  <!-- Create a container for CKEditor -->
+  <div id="editor"></div>
+
+  <script>
+    // Initialize CKEditor
+    ClassicEditor
+      .create(document.querySelector('#editor'))
+      .then(editor => {
+        // Define the custom plugin
+        class CustomRestApiPlugin {
+          constructor(editor) {
+            this.editor = editor;
+          }
+
+          init() {
+            const editor = this.editor;
+
+            editor.plugins.get('FileRepository').createUploadAdapter = loader => {
+              return {
+                upload: () => {
+                  // Your file upload logic here
+                },
+                abort: () => {
+                  // Your file upload abort logic here
+                }
+              };
+            };
+
+            editor.commands.add('customRestApiCommand', {
+              execute: async () => {
+                // Custom command logic here
+                const imageUrl = await this.selectImageFromApi();
+
+                if (imageUrl) {
+                  editor.model.change(writer => {
+                    const imageElement = writer.createElement('image', {
+                      src: imageUrl
+                    });
+
+                    editor.model.insertContent(imageElement);
+                  });
+                }
+              }
+            });
+
+            editor.ui.componentFactory.add('customRestApiButton', locale => {
+              const button = document.createElement('button');
+              button.type = 'button';
+              button.innerText = 'Custom REST API';
+              button.classList.add('ck-button');
+
+              button.addEventListener('click', () => {
+                // Execute the custom command when the button is clicked
+                editor.execute('customRestApiCommand');
+              });
+
+              return button;
+            });
+
+            // Get the toolbar container element
+            const toolbarContainer = editor.ui.view.toolbar.element;
+
+            // Create a new toolbar item for the custom button
+            const customButton = editor.ui.componentFactory.create('customRestApiButton');
+
+            // Add the custom button to the toolbar
+            toolbarContainer.appendChild(customButton);
+          }
+
+          selectImageFromApi() {
+            return new Promise(resolve => {
+              const apiUrl = 'https://api.slingacademy.com/v1/sample-data/photos?offset=5&limit=20'; 
+
+              // Simulate API delay
+              setTimeout(() => {
+                // Simulated API response
+                const apiResponse = [
+                  'https://api.slingacademy.com/public/sample-photos/1.jpeg',
+                  'https://api.slingacademy.com/public/sample-photos/2.jpeg',
+                  'https://api.slingacademy.com/public/sample-photos/3.jpeg'
+                ];
+
+                // Open a new window to display API results
+                const apiResultsWindow = window.open('', '_blank', 'width=400,height=300');
+                const apiResultsDocument = apiResultsWindow.document;
+                apiResultsDocument.write('<h2>Select an Image</h2>');
+
+                // Display images in the API results window
+                apiResponse.forEach(imageUrl => {
+                  const image = new Image();
+                  image.src = imageUrl;
+                  image.style.maxWidth = '100px';
+                  image.style.cursor = 'pointer';
+
+                  image.addEventListener('click', () => {
+                    // Resolve the promise with the selected image URL
+                    resolve(imageUrl);
+
+                    // Close the API results window
+                    apiResultsWindow.close();
+                  });
+
+                  apiResultsDocument.body.appendChild(image);
+                  apiResultsDocument.write('<br>');
+                });
+              }, 1000);
+            });
+          }
+        }
+
+        // Create an instance of the custom plugin
+        const customPlugin = new CustomRestApiPlugin(editor);
+
+        // Initialize the custom plugin
+        customPlugin.init();
+      })
+      .catch(error => {
+        console.error('Error initializing CKEditor:', error);
+      });
+  </script>
+</body>
+
+</html>
